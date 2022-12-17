@@ -3,6 +3,8 @@ package org.wltea.analyzer.dic;
 import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Date;
+import java.util.List;
 
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -11,6 +13,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.SpecialPermission;
+import org.wltea.analyzer.help.DbHelper;
 import org.wltea.analyzer.help.ESPluginLoggerFactory;
 
 public class Monitor implements Runnable {
@@ -41,6 +44,7 @@ public class Monitor implements Runnable {
 	public void run() {
 		SpecialPermission.check();
 		AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+			logger.info("执行获取热词部署 {}", new Date());
 			this.runUnprivileged();
 			return null;
 		});
@@ -57,54 +61,10 @@ public class Monitor implements Runnable {
 
 	public void runUnprivileged() {
 
-		//超时设置
-		RequestConfig rc = RequestConfig.custom().setConnectionRequestTimeout(10*1000)
-				.setConnectTimeout(10*1000).setSocketTimeout(15*1000).build();
 
-		HttpHead head = new HttpHead(location);
-		head.setConfig(rc);
-
-		//设置请求头
-		if (last_modified != null) {
-			head.setHeader("If-Modified-Since", last_modified);
-		}
-		if (eTags != null) {
-			head.setHeader("If-None-Match", eTags);
-		}
-
-		CloseableHttpResponse response = null;
-		try {
-
-			response = httpclient.execute(head);
-
-			//返回200 才做操作
-			if(response.getStatusLine().getStatusCode()==200){
-
-				if (((response.getLastHeader("Last-Modified")!=null) && !response.getLastHeader("Last-Modified").getValue().equalsIgnoreCase(last_modified))
-						||((response.getLastHeader("ETag")!=null) && !response.getLastHeader("ETag").getValue().equalsIgnoreCase(eTags))) {
-
-					// 远程词库有更新,需要重新加载词典，并修改last_modified,eTags
-					Dictionary.getSingleton().reLoadMainDict();
-					last_modified = response.getLastHeader("Last-Modified")==null?null:response.getLastHeader("Last-Modified").getValue();
-					eTags = response.getLastHeader("ETag")==null?null:response.getLastHeader("ETag").getValue();
-				}
-			}else if (response.getStatusLine().getStatusCode()==304) {
-				//没有修改，不做操作
-				//noop
-			}else{
-				logger.info("remote_ext_dict {} return bad code {}" , location , response.getStatusLine().getStatusCode() );
-			}
-
-		} catch (Exception e) {
-			logger.error("remote_ext_dict {} error!",e , location);
-		}finally{
-			try {
-				if (response != null) {
-					response.close();
-				}
-			} catch (IOException e) {
-				logger.error(e.getMessage(), e);
-			}
+		List<String> hotWords = DbHelper.getHotWords();
+		if (!hotWords.isEmpty()){
+			Dictionary.getSingleton().addWords(hotWords);
 		}
 	}
 

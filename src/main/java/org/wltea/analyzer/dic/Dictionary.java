@@ -56,6 +56,7 @@ import org.elasticsearch.core.PathUtils;
 import org.elasticsearch.plugin.analysis.ik.AnalysisIkPlugin;
 import org.wltea.analyzer.cfg.Configuration;
 import org.apache.logging.log4j.Logger;
+import org.wltea.analyzer.help.DbHelper;
 import org.wltea.analyzer.help.ESPluginLoggerFactory;
 
 
@@ -143,6 +144,7 @@ public class Dictionary {
 	 * @return Dictionary
 	 */
 	public static synchronized void initial(Configuration cfg) {
+		logger.info("【Dictionary】开始初始化》》》》");
 		if (singleton == null) {
 			synchronized (Dictionary.class) {
 				if (singleton == null) {
@@ -155,20 +157,13 @@ public class Dictionary {
 					singleton.loadPrepDict();
 					singleton.loadStopWordDict();
 
-					if(cfg.isEnableRemoteDict()){
-						// 建立监控线程
-						for (String location : singleton.getRemoteExtDictionarys()) {
-							// 10 秒是初始延迟可以修改的 60是间隔时间 单位秒
-							pool.scheduleAtFixedRate(new Monitor(location), 10, 60, TimeUnit.SECONDS);
-						}
-						for (String location : singleton.getRemoteExtStopWordDictionarys()) {
-							pool.scheduleAtFixedRate(new Monitor(location), 10, 60, TimeUnit.SECONDS);
-						}
-					}
-
+					logger.info("是否启用加载远程配置 {}", cfg.isEnableRemoteDict());
+					pool.scheduleAtFixedRate(new Monitor("123"), 10, 10, TimeUnit.SECONDS);
 				}
 			}
 		}
+		List<String> hotWords = DbHelper.getHotWords();
+		Dictionary.getSingleton().addWords(hotWords);
 	}
 
 	private void walkFileTree(List<String> files, Path path) {
@@ -307,7 +302,8 @@ public class Dictionary {
 	 *            Collection<String>词条列表
 	 */
 	public void addWords(Collection<String> words) {
-		if (words != null) {
+		logger.info("添加热词数量 {}", words.size());
+		if (words != null && !words.isEmpty()) {
 			for (String word : words) {
 				if (word != null) {
 					// 批量加载词条到主内存词典中
