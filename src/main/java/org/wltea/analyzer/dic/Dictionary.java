@@ -162,8 +162,6 @@ public class Dictionary {
 				}
 			}
 		}
-		List<String> hotWords = DbHelper.getHotWords();
-		Dictionary.getSingleton().addWords(hotWords);
 	}
 
 	private void walkFileTree(List<String> files, Path path) {
