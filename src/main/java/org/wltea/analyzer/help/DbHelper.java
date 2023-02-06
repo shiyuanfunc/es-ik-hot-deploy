@@ -20,7 +20,7 @@ import java.util.List;
 public class DbHelper {
 
 
-    static String url = "jdbc:mysql://192.168.31.130:43306/es_plugins?characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true";
+    static String url = "jdbc:mysql://mysql.dev.runan.life:3306/es_plugins?characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true";
     static String username = "root";
     static String password = "mysqlroot";
 
