@@ -24,6 +24,8 @@ public class DbHelper {
     static String username = "root";
     static String password = "mysqlroot";
 
+    private static volatile boolean inited = false;
+
     private static final Logger logger = ESPluginLoggerFactory.getLogger(DbHelper.class.getName());
 
     static {
@@ -39,6 +41,11 @@ public class DbHelper {
     public static List<String> getHotWords(){
         List<String> hotWords = new ArrayList<>();
         String sql = " SELECT keyword from es_word WHERE `status` = 1 ";
+        if (!inited){
+            logger.info("初始化加载， 第一次全量数据");
+            sql = " SELECT keyword from es_word ";
+            inited = true;
+        }
         Connection connect = getConnect();
         try {
             PreparedStatement preparedStatement = connect.prepareStatement(sql);
